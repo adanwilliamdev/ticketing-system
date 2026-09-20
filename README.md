@@ -1,193 +1,81 @@
-# Sistema de Agendamento e Pagamentos com Alta Concorrência
+# Ticketing System — Next.js + TypeScript
 
-Sistema estilo Ticketmaster/Sympla com foco em concorrência, transações, resiliência e consistência de dados.
+Sistema de reserva e pagamento de ingressos com alta concorrência, portado de Spring Boot (Java 17) para
+**Next.js 15 (App Router) + React 19 + TypeScript + Node.js**. A API REST mantém os mesmos caminhos, formatos e
+regras de negócio do projeto original; foi adicionada uma interface web.
 
-## 🚀 Tecnologias
+## Como rodar
 
-- Java 21
-- Spring Boot 3.1.5
-- PostgreSQL 15
-- Redis 7
-- Redisson (Lock Distribuído)
-- Flyway (Migrações)
-- Docker & Docker Compose
-- JUnit 5 + Mockito + AssertJ (Testes)
-
-## 📋 Funcionalidades
-
-### Controle de Concorrência
-- Pessimistic Locking no banco de dados
-- Distributed Locking com Redisson/Redis
-- Mecanismo de reserva temporária
-
-### Reserva Temporária
-- Reserva por 10 minutos (configurável)
-- Expiração automática via job agendado
-- Liberação automática de assentos
-
-### Idempotência
-- Chave de idempotência para pagamentos
-- Prevenção de processamento duplicado
-- Resiliência em requisições
-
-## 🏗️ Arquitetura
-
-### Estrutura do Projeto
-
-```
-src/main/java/com/ticketing/
-├── config/          # Configurações
-├── controller/      # Controllers REST
-├── dto/             # Data Transfer Objects
-├── entity/          # Entidades JPA
-├── exception/       # Exceções personalizadas
-├── repository/      # Repositórios JPA
-├── service/         # Serviços
-│   └── impl/        # Implementações
-└── util/            # Utilitários
-
-src/test/java/com/ticketing/
-├── entity/          # Testes de regras de negócio das entidades
-├── service/impl/    # Testes unitários dos serviços (mocks)
-└── util/            # Testes de utilitários
-```
-
-## 🔧 Como Executar
-
-### Pré-requisitos
-- JDK 21
-- Docker & Docker Compose
-- Maven 3.9+
-
-### Com Docker Compose (recomendado)
+Requisitos: Node.js ≥ 22 e Docker.
 
 ```bash
-# Subir Postgres e Redis
-docker compose -f docker/docker-compose.yml up -d
-
-# Conferir se os containers estão saudáveis
-docker compose -f docker/docker-compose.yml ps
-
-# Executar a aplicação
-mvn spring-boot:run
+npm install
+npm run infra:up      # Postgres 15 + Redis 7 (mesmas credenciais do projeto original)
+npm run dev           # http://localhost:3000 — aplica as migrações ao subir
 ```
 
-Para derrubar os serviços e apagar os volumes (útil se as credenciais do banco pararem de bater, por exemplo após uma tentativa anterior com volume antigo):
+Atalho: `./start.sh` (Linux/macOS) ou `start.bat` (Windows). Tudo em container: `docker compose -f docker/docker-compose.yml --profile app up --build`.
 
-```bash
-docker compose -f docker/docker-compose.yml down -v
-```
+> Se você já rodou o projeto Java com o volume `postgres_data`, use um banco novo (`npm run infra:down -- -v`): o Flyway e este
+> runner mantêm históricos de migração diferentes.
 
-### Subindo tudo em containers (app incluída)
+| Comando | O que faz |
+|---|---|
+| `npm test` | 86 testes (`node:test` + `tsx`), sem precisar de Postgres/Redis |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run migrate` | aplica migrações pendentes sem subir o servidor |
+| `npm run build && npm start` | produção |
 
-```bash
-docker compose -f docker/docker-compose.yml up --build
-```
+## Mapa Java → TypeScript
 
-### Localmente, sem Compose
+| Original | Aqui |
+|---|---|
+| Spring Web (`@RestController`) | Route Handlers em `src/app/api/**/route.ts` |
+| Bean Validation | `src/lib/validation.ts` (mesmas mensagens) |
+| `GlobalExceptionHandler` | `src/lib/http.ts` (`mapError`, mesmo JSON de erro) |
+| JPA / Hibernate | SQL explícito com `pg` em `src/lib/repositories/` |
+| `@Lock(PESSIMISTIC_WRITE)` | `SELECT … FOR UPDATE` |
+| `@Transactional` | `db.transaction()` (`src/lib/db.ts`) |
+| Redisson `RLock` | `RedisLockManager` (`src/lib/lock.ts`) sobre `ioredis` |
+| `@Scheduled` + `@Async` | `instrumentation.ts` → `jobs/expiration.ts` |
+| Flyway | `src/lib/migrate.ts` + `migrations/` (V1, V2 idênticos; V3 novo) |
+| Actuator `/health` | `GET /api/actuator/health` |
 
-```bash
-# Iniciar PostgreSQL
-docker run -d -p 5432:5432 -e POSTGRES_DB=ticketing_db -e POSTGRES_USER=ticketing_user -e POSTGRES_PASSWORD=ticketing_pass postgres:15
+## API
 
-# Iniciar Redis
-docker run -d -p 6379:6379 redis:7
+Igual ao original (prefixo `/api`): `POST /reservations` · `GET|DELETE /reservations/{token}` · `POST /reservations/{token}/confirm` ·
+`GET /reservations/{token}/validate` · `POST /payments` · `GET /payments/idempotency/{key}` · `GET /payments/reservation/{token}`.
 
-# Executar aplicação
-mvn spring-boot:run
-```
+Novos (o original não tinha catálogo; a interface precisa deles): `GET /events`, `GET /events/{id}`, `GET /events/{id}/seats`,
+e `GET|POST /internal/expire-reservations` (cron externo, protegido por `CRON_SECRET`).
 
-A API sobe em `http://localhost:8080/api` (o `context-path` é `/api`).
+## Diferenças em relação ao original (todas intencionais)
 
-## 🧪 Testes Automatizados
+1. **V3 da migração**: `reservations.ticket_id` e `payments.ticket_id` eram `UNIQUE`, o que impedia reservar de novo um assento
+   liberado ou expirado. Agora só vale "uma reserva ATIVA / um pagamento CONCLUÍDO por assento" (índices parciais).
+2. **Falha no gateway**: o original tentava gravar `FAILED` e liberar o assento, mas o `@Transactional` desfazia tudo quando a
+   exceção subia. Aqui as duas coisas são persistidas antes do erro ser devolvido.
+3. **Ordem lock → transação → commit → unlock** (no original o lock era solto antes do commit) e **releitura da reserva sob lock**,
+   o que evita cobrar duas vezes e evita que o job de expiração desfaça uma venda concluída.
+4. **Gateway fora da transação**: a chamada externa não segura conexão nem locks de linha.
+5. `POST /payments` devolve um DTO (o original serializava a entidade JPA com relações bidirecionais).
+6. JSON malformado → 400 (no original caía no handler genérico, 500). Datas saem em ISO-8601 UTC (`…Z`).
+7. Locks de linha sempre na ordem evento → assento → reserva, para evitar deadlock entre reserva, pagamento e expiração.
 
-O projeto tem testes unitários para as regras de negócio mais sensíveis do sistema: criação/expiração de reservas e processamento de pagamentos (incluindo idempotência e liberação de assento em caso de falha no gateway).
+Comportamentos herdados de propósito: `confirm` define a expiração para "agora + 5 min" (pode encurtar); reservas liberadas ficam
+`CANCELLED` (o status `EXPIRED` nunca é usado); idempotência devolve **409** em vez de repetir o resultado anterior; o status
+do evento não é checado ao reservar.
 
-Esses testes são **unitários puros** (JUnit 5 + Mockito), sem subir Spring context, banco ou Redis — rodam rápido e não precisam do `docker compose` de pé.
+## Não portado
 
-### Rodar todos os testes
+Métricas Prometheus/Actuator (além do health), `@EnableCaching` (nenhum `@Cacheable` era usado), rate limiting (só existia como
+configuração, sem implementação) e as chaves de configuração sem uso (`max-reservations-per-user`, `retry-*`, `idempotency-key-ttl`).
+Os campos de cartão do `PaymentRequest` são aceitos e descartados: o gateway é simulado e este serviço não deve tocar em dados de cartão.
 
-```bash
-mvn test
-```
+## Deploy
 
-### Rodar uma classe específica
+- **Servidor Node / Docker**: funciona como está (job de expiração em processo).
+- **Serverless**: defina `EXPIRATION_JOB_ENABLED=false`, `MIGRATE_ON_STARTUP=false`, rode `npm run migrate` no deploy e agende
+  `GET /api/internal/expire-reservations` com `Authorization: Bearer $CRON_SECRET`. Precisa de Redis acessível (ex.: Upstash via `REDIS_URL`).
 
-```bash
-mvn test -Dtest=ReservationServiceImplTest
-mvn test -Dtest=PaymentServiceImplTest
-```
-
-### O que está coberto
-
-- **`ReservationServiceImplTest`** — criação de reserva (sucesso e todas as regras de negócio: evento esgotado, assento indisponível, assento já reservado, falha ao adquirir lock), liberação de reserva, validação de reserva expirada/válida, confirmação de reserva e o job de expiração automática.
-- **`PaymentServiceImplTest`** — pagamento com sucesso, idempotência (pagamento duplicado), reserva inválida/expirada, falha no gateway (marca pagamento como `FAILED` e libera o assento), e falha ao adquirir lock distribuído.
-- **`ReservationTokenGeneratorTest`** — geração de tokens únicos, formato seguro para URL e tamanho consistente.
-- **`ReservationTest`** — regra de expiração (`isExpired()`) da entidade.
-
-O projeto já tem `testcontainers` (Postgres) configurado no `pom.xml` como base para testes de integração futuros, caso queira testar o comportamento real do banco/Flyway/locks pessimistas end-to-end — hoje ainda não há testes desse tipo implementados.
-
-## 📚 Endpoints
-
-### Reservas
-- `POST /api/reservations` - Criar reserva
-- `GET /api/reservations/{token}` - Buscar reserva
-- `POST /api/reservations/{token}/confirm` - Confirmar reserva
-- `DELETE /api/reservations/{token}` - Cancelar reserva
-- `GET /api/reservations/{token}/validate` - Validar reserva
-
-### Pagamentos
-- `POST /api/payments` - Processar pagamento
-- `GET /api/payments/idempotency/{key}` - Buscar por chave de idempotência
-- `GET /api/payments/reservation/{token}` - Buscar por reserva
-
-## 🧪 Testes de Concorrência (carga)
-
-Para testar concorrência sob carga real, use ferramentas como:
-- Apache JMeter
-- Gatling
-- Scripts de teste de carga
-
-Exemplo de teste com JMeter:
-
-```bash
-# Criar requisições simultâneas a partir de um plano de teste
-jmeter -n -t test-plan.jmx -l results.jtl
-```
-
-## 📊 Monitoramento
-
-- Actuator endpoints: `/actuator/health`, `/actuator/metrics`
-- Prometheus: `/actuator/prometheus`
-
-## 🛡️ Funcionalidades de Segurança
-
-- Rate limiting (100 requisições/minuto)
-- Validação de entrada
-- Transações ACID
-- Locks distribuídos
-
-## 🔍 Resiliência
-
-- Retry automático em falhas
-- Fallbacks para operações críticas
-- Timeout configurável
-
-## 📈 Performance
-
-- Pool de conexões otimizado
-- Caching com Redis
-- Batch operations no JPA
-- Índices otimizados no PostgreSQL
-
-## 🤝 Contribuindo
-
-1. Fork o projeto
-2. Crie sua feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
-
-## 📝 Licença
-
-Este projeto está sob a licença MIT.
+Os dados de exemplo (V2) têm datas de 2024; a API não valida a data do evento ao reservar, então continuam utilizáveis.

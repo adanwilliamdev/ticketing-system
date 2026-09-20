@@ -12,49 +12,37 @@ services:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ticketing_user -d ticketing_db"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   redis:
     image: redis:7-alpine
     container_name: ticketing-redis
     ports:
       - "6379:6379"
-    volumes:
-      - redis_data:/data
-    command: redis-server --appendonly yes
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
+  # Aplicação completa em container: docker compose -f docker/docker-compose.yml up --build
   app:
     build:
       context: ..
-      dockerfile: Dockerfile
     container_name: ticketing-app
-    environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ticketing_db
-      SPRING_DATASOURCE_USERNAME: ticketing_user
-      SPRING_DATASOURCE_PASSWORD: ticketing_pass
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
-    ports:
-      - "8080:8080"
+    profiles: ["app"]
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/api/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    environment:
+      DATABASE_URL: postgresql://ticketing_user:ticketing_pass@postgres:5432/ticketing_db
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "3000:3000"
 
 volumes:
   postgres_data:
-  redis_data:

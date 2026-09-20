@@ -1,12 +1,11 @@
 @echo off
-echo Iniciando serviços...
-docker-compose -f docker/docker-compose.yml up -d
+cd /d "%~dp0"
 
-echo Aguardando serviços estarem prontos...
-timeout /t 10
+where docker >nul 2>nul || (echo Docker nao encontrado. & exit /b 1)
+if not exist node_modules call npm install
 
-echo Verificando status...
-docker-compose -f docker/docker-compose.yml ps
+echo Subindo Postgres e Redis...
+call npm run infra:up || exit /b 1
 
-echo Iniciando aplicação...
-mvn spring-boot:run
+echo Iniciando a aplicacao em http://localhost:3000 (as migracoes rodam na subida)
+call npm run dev

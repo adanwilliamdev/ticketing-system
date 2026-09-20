@@ -1,15 +1,26 @@
-# Build stage
-FROM maven:3.9.5-eclipse-temurin-21 AS build
+FROM node:22-alpine AS deps
 WORKDIR /app
-COPY pom.xml .
-RUN mvn dependency:go-offline
-COPY src ./src
-RUN mvn clean package -DskipTests
+COPY package.json package-lock.json* ./
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
-# Runtime stage
-FROM eclipse-temurin:21-jre-alpine
+FROM node:22-alpine AS build
 WORKDIR /app
-RUN apk add --no-cache curl
-COPY --from=build /app/target/*.jar app.jar
-EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENV NEXT_TELEMETRY_DISABLED=1 NEXT_OUTPUT=standalone
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npm run build
+
+FROM node:22-alpine AS runtime
+WORKDIR /app
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
+RUN addgroup -S app && adduser -S app -G app
+COPY --from=build --chown=app:app /app/.next/standalone ./
+COPY --from=build --chown=app:app /app/.next/static ./.next/static
+COPY --from=build --chown=app:app /app/public ./public
+# As migrações são lidas do disco na subida (MIGRATE_ON_STARTUP=true).
+COPY --from=build --chown=app:app /app/migrations ./migrations
+USER app
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:3000/api/actuator/health || exit 1
+CMD ["node", "server.js"]

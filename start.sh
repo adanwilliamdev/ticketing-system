@@ -1,16 +1,13 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Sobe Postgres + Redis e inicia o Next.js em modo desenvolvimento.
+set -euo pipefail
+cd "$(dirname "$0")"
 
-# Iniciar serviços
-echo "Iniciando serviços..."
-docker-compose -f docker/docker-compose.yml up -d
+command -v docker >/dev/null || { echo "Docker não encontrado."; exit 1; }
+[ -d node_modules ] || npm install
 
-# Aguardar serviços estarem prontos
-echo "Aguardando serviços estarem prontos..."
-sleep 10
+echo "Subindo Postgres e Redis..."
+npm run infra:up
 
-# Verificar status
-docker-compose -f docker/docker-compose.yml ps
-
-# Iniciar aplicação
-echo "Iniciando aplicação..."
-mvn spring-boot:run
+echo "Iniciando a aplicação em http://localhost:3000 (as migrações rodam na subida)"
+npm run dev
