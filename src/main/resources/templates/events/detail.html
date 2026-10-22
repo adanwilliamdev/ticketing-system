@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/base :: head(${event.name})}"></head>
+<body>
+<div class="container">
+  <main class="stack-lg">
+    <a class="back-link" th:href="@{/}">
+      <svg th:replace="~{fragments/icons :: arrow-left}"></svg>
+      Todos os eventos
+    </a>
+
+    <div class="stack-sm">
+      <div class="row wrap gap-md">
+        <h1 class="title" th:text="${event.name}">Evento</h1>
+        <span class="badge badge-secondary" th:text="${@fmt.currency(event.price)}">R$ 0,00</span>
+      </div>
+      <p class="muted" th:if="${event.description != null}" th:text="${event.description}">Descrição</p>
+      <div class="row wrap gap-lg muted small">
+        <div class="row gap-sm">
+          <svg th:replace="~{fragments/icons :: calendar}"></svg>
+          <span th:text="${@fmt.dateTime(event.startDateTime)}">data</span>
+        </div>
+        <div class="row gap-sm" th:if="${event.location != null}">
+          <svg th:replace="~{fragments/icons :: pin}"></svg>
+          <span th:text="${event.location}">local</span>
+        </div>
+      </div>
+    </div>
+
+    <form id="seat-form" class="stack-lg" method="post" th:action="@{/events/{id}/reserve(id=${event.id})}"
+          th:attr="data-seats-url=@{/api/events/{id}/seats(id=${event.id})}">
+      <section class="card">
+        <header class="card-header"><h2 class="card-title">Assentos</h2></header>
+        <div class="card-content stack-lg">
+          <div class="row wrap gap-md muted xsmall">
+            <span class="row gap-xs"><span class="swatch seat-available"></span>Disponível</span>
+            <span class="row gap-xs"><span class="swatch seat-selected"></span>Selecionado</span>
+            <span class="row gap-xs"><span class="swatch seat-reserved"></span>Reservado</span>
+            <span class="row gap-xs"><span class="swatch seat-sold"></span>Vendido</span>
+          </div>
+
+          <div class="stack-sm" th:each="section : ${sections}">
+            <h3 class="section-title" th:text="${section.key}">Seção</h3>
+            <div class="seats">
+              <label class="seat" th:each="seat : ${section.value}"
+                     th:title="${seat.seatNumber + (seat.rowNumber != null ? ' · ' + seat.rowNumber : '')}">
+                <input type="radio" name="seatNumber" required
+                       th:value="${seat.seatNumber}"
+                       th:attr="data-seat=${seat.seatNumber}"
+                       th:disabled="${seat.status.name() != 'AVAILABLE'}"
+                       th:checked="${seat.seatNumber == selectedSeat}">
+                <span th:class="'seat-face seat-' + ${#strings.toLowerCase(seat.status.name())}"
+                      th:text="${seat.seatNumber}">A001</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card reserve-card">
+        <header class="card-header">
+          <h2 class="card-title">Reservar assento <span id="selected-seat-label"></span></h2>
+        </header>
+        <div class="card-content stack-md">
+          <div class="stack-xs">
+            <label class="label" for="email">E-mail (opcional)</label>
+            <input class="input" id="email" name="userEmail" type="email" maxlength="255"
+                   placeholder="voce@exemplo.com" th:value="${email}">
+          </div>
+
+          <div class="alert alert-error" role="alert" th:if="${reserveError != null}">
+            <svg th:replace="~{fragments/icons :: alert}"></svg>
+            <div>
+              <p class="alert-title">Não foi possível reservar</p>
+              <p class="alert-text" th:text="${reserveError}">Erro</p>
+            </div>
+          </div>
+
+          <div class="row gap-sm">
+            <button class="btn btn-primary" type="submit">Reservar este assento</button>
+            <button class="btn btn-outline" type="reset" id="clear-selection">Cancelar seleção</button>
+          </div>
+          <p class="muted xsmall">Você terá alguns minutos para concluir o pagamento antes que a reserva expire.</p>
+        </div>
+      </section>
+    </form>
+  </main>
+</div>
+<script th:src="@{/js/seat-map.js}"></script>
+</body>
+</html>

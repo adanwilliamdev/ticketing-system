@@ -1,89 +1,60 @@
 # 🎟️ Ticketing System
 
-Sistema completo de **reserva e venda de ingressos**, desenvolvido com arquitetura moderna, API REST, processamento assíncrono e controle de concorrência.
+Sistema completo de **reserva e venda de ingressos**, 100% em **Java**: API REST, páginas web renderizadas no servidor, processamento agendado e controle de concorrência.
 
 ## 🚀 Stack
 
-### Frontend
-
-<div align="left">
-
-[![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge\&logo=next.js\&logoColor=white)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge\&logo=typescript\&logoColor=white)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=for-the-badge\&logo=tailwindcss\&logoColor=white)](https://tailwindcss.com/)
-[![shadcn/ui](https://img.shields.io/badge/shadcn%2Fui-UI-000000?style=for-the-badge)](https://ui.shadcn.com/)
-[![TanStack Query](https://img.shields.io/badge/TanStack_Query-5-FF4154?style=for-the-badge\&logo=reactquery\&logoColor=white)](https://tanstack.com/query)
-
-</div>
-
-### Backend
-
-<div align="left">
-
-[![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=for-the-badge\&logo=python\&logoColor=white)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=for-the-badge\&logo=fastapi\&logoColor=white)](https://fastapi.tiangolo.com/)
-[![Pydantic](https://img.shields.io/badge/Pydantic-2-E92063?style=for-the-badge)](https://docs.pydantic.dev/)
-[![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-D71F00?style=for-the-badge\&logo=sqlalchemy\&logoColor=white)](https://www.sqlalchemy.org/)
-[![Alembic](https://img.shields.io/badge/Alembic-Migrations-1F2937?style=for-the-badge)](https://alembic.sqlalchemy.org/)
-
-</div>
-
-### Database & Infrastructure
-
-<div align="left">
-
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?style=for-the-badge\&logo=postgresql\&logoColor=white)](https://www.postgresql.org/)
-[![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=for-the-badge\&logo=redis\&logoColor=white)](https://redis.io/)
-[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge\&logo=docker\&logoColor=white)](https://www.docker.com/)
-
-</div>
+| Camada            | Tecnologia                                                    |
+| ----------------- | ------------------------------------------------------------- |
+| Linguagem         | Java 21                                                       |
+| Framework         | Spring Boot 3.3 (Web MVC)                                     |
+| Páginas           | Thymeleaf + CSS/JavaScript puros (sem etapa de build)         |
+| Persistência      | Spring Data JPA (Hibernate)                                   |
+| Migrações         | Flyway                                                        |
+| Banco de dados    | PostgreSQL 15                                                 |
+| Cache / Locks     | Redis 7 (Spring Data Redis)                                   |
+| Validação         | Jakarta Bean Validation                                       |
+| Agendamento       | Spring `@Scheduled`                                           |
+| Documentação      | springdoc-openapi (Swagger UI)                                |
+| Observabilidade   | Spring Boot Actuator                                          |
+| Infra             | Docker e Docker Compose                                       |
 
 ## ✨ Funcionalidades
 
-* 🎫 Reserva e venda de ingressos
+* 🎫 Reserva e venda de ingressos com mapa de assentos
 * 🔐 Controle de concorrência
-* 🔒 Locks distribuídos
+* 🔒 Locks distribuídos (Redis, reentrantes, com lease)
 * 💳 Idempotência de pagamentos
 * ⏱️ Expiração automática de reservas
-* 🗄️ Persistência com PostgreSQL
-* ⚡ Cache e controle distribuído com Redis
-* 🔄 Processamento assíncrono
+* 🗄️ Persistência com PostgreSQL e migrações versionadas
 * 📡 API REST com documentação automática
 * 🐳 Ambiente completo com Docker
 
 ## 🏗️ Arquitetura
 
 ```text
-┌──────────────────────────────┐
-│           Frontend           │
-│                              │
-│ Next.js · TypeScript         │
-│ Tailwind · shadcn/ui         │
-│ TanStack Query               │
-└──────────────┬───────────────┘
-               │
-               │ REST API
-               │ JSON
-               ▼
-┌──────────────────────────────┐
-│           Backend            │
-│                              │
-│ Python · FastAPI             │
-│ Pydantic · SQLAlchemy        │
-│ Alembic                      │
-└──────────────┬───────────────┘
-               │
-        ┌──────┴──────┐
-        ▼             ▼
-┌──────────────┐ ┌──────────────┐
-│ PostgreSQL   │ │    Redis     │
-│      15      │ │      7       │
-└──────────────┘ └──────────────┘
+┌───────────────────────────────────────────┐
+│            Aplicação Spring Boot          │
+│                                           │
+│  Páginas (Thymeleaf)   API REST (/api/**) │
+│            └──────┬───────────┘           │
+│               Serviços                    │
+│   Catálogo · Reservas · Pagamentos        │
+│       Locks · Gateway · Job de expiração  │
+│               Repositórios (JPA)          │
+└──────────────┬───────────────┬────────────┘
+               ▼               ▼
+        ┌────────────┐   ┌────────────┐
+        │ PostgreSQL │   │   Redis    │
+        │     15     │   │     7      │
+        └────────────┘   └────────────┘
 ```
 
 ## ▶️ Como executar
 
-### Docker
+Pré-requisitos: **JDK 21**, **Maven 3.9+** e **Docker**.
+
+### Tudo com Docker
 
 ```bash
 docker compose --profile app up --build
@@ -91,87 +62,115 @@ docker compose --profile app up --build
 
 Após a inicialização:
 
-* **Frontend:** http://localhost:3000
-* **Backend:** http://localhost:8000
-* **API Docs:** http://localhost:8000/docs
+* **Aplicação:** http://localhost:8080
+* **Swagger UI:** http://localhost:8080/docs
+* **Health:** http://localhost:8080/api/actuator/health
+
+Nesse modo os eventos e assentos de exemplo são criados automaticamente (`SEED_ENABLED=true`).
 
 ### Desenvolvimento local
 
-Inicialize os serviços de infraestrutura:
-
 ```bash
+# infraestrutura
 docker compose up -d postgres redis
+
+# aplicação (as migrações rodam no startup; SEED_ENABLED cria os dados de exemplo)
+SEED_ENABLED=true mvn spring-boot:run
 ```
 
-#### Backend
+No Windows (PowerShell): `$env:SEED_ENABLED="true"; mvn spring-boot:run`
+
+### Testes
 
 ```bash
-cd backend
-
-python -m venv .venv
-source .venv/bin/activate
-
-pip install -r requirements.txt
-
-python seed.py
-
-uvicorn app.main:app --reload --port 8000
+mvn test
 ```
 
-#### Frontend
+> Se você já tem um banco criado por uma versão anterior do projeto, suba um banco novo
+> (`docker compose down -v`): o Flyway cria o schema do zero.
 
-Em outro terminal:
+## ⚙️ Configuração
 
-```bash
-cd frontend
-
-npm install
-npm run dev
-```
+Tudo é configurável por variável de ambiente; os padrões batem com o `docker-compose.yml`. Veja [`.env.example`](.env.example) para a lista completa (`DB_URL`, `DB_USER`, `DB_PASSWORD`, `REDIS_HOST`, `RESERVATION_TIMEOUT_MINUTES`, `EXPIRATION_JOB_ENABLED`, `CRON_SECRET`, ...).
 
 ## 📁 Estrutura
 
 ```text
 ticketing-system/
-│
-├── backend/
-│   ├── app/
-│   ├── alembic/
-│   ├── requirements.txt
-│   └── seed.py
-│
-├── frontend/
-│   ├── app/
-│   ├── components/
-│   └── package.json
-│
-└── docker-compose.yml
+├── pom.xml
+├── Dockerfile
+├── docker-compose.yml
+└── src/
+    ├── main/
+    │   ├── java/com/ticketing/
+    │   │   ├── api/          # controllers REST + tratamento de erros
+    │   │   ├── web/          # páginas HTML (Thymeleaf) e formatação
+    │   │   ├── service/      # catálogo, reservas, pagamentos
+    │   │   ├── repository/   # Spring Data JPA
+    │   │   ├── domain/       # entidades e enums
+    │   │   ├── lock/         # lock distribuído sobre Redis
+    │   │   ├── gateway/      # gateway de pagamento (simulado)
+    │   │   ├── job/          # expiração de reservas
+    │   │   ├── seed/         # dados de exemplo
+    │   │   ├── dto/ mapper/ config/ exception/
+    │   └── resources/
+    │       ├── db/migration/ # Flyway
+    │       ├── templates/    # páginas Thymeleaf
+    │       ├── static/       # CSS e JavaScript
+    │       └── application.yml
+    └── test/java/            # testes unitários
 ```
+
+## 🌐 Páginas
+
+| Rota                       | Descrição                                              |
+| -------------------------- | ------------------------------------------------------ |
+| `/`                        | Lista de eventos com ingressos disponíveis             |
+| `/events/{id}`             | Detalhe do evento, mapa de assentos e reserva          |
+| `/reservations/{token}`    | Contagem regressiva, pagamento e cancelamento          |
+
+## 📡 API REST
+
+### Eventos
+| Método | Endpoint                 |
+| ------ | ------------------------ |
+| `GET`  | `/api/events`            |
+| `GET`  | `/api/events/{id}`       |
+| `GET`  | `/api/events/{id}/seats` |
+
+### Reservas
+| Método   | Endpoint                              |
+| -------- | ------------------------------------- |
+| `POST`   | `/api/reservations`                   |
+| `GET`    | `/api/reservations/{token}`           |
+| `DELETE` | `/api/reservations/{token}`           |
+| `POST`   | `/api/reservations/{token}/confirm`   |
+| `GET`    | `/api/reservations/{token}/validate`  |
+
+### Pagamentos
+| Método | Endpoint                            |
+| ------ | ----------------------------------- |
+| `POST` | `/api/payments`                     |
+| `GET`  | `/api/payments/idempotency/{key}`   |
+| `GET`  | `/api/payments/reservation/{token}` |
+
+### Operações internas
+| Método        | Endpoint                         | Observação                                        |
+| ------------- | -------------------------------- | ------------------------------------------------- |
+| `GET`/`POST`  | `/internal/expire-reservations`  | `Authorization: Bearer <CRON_SECRET>`             |
+| `GET`         | `/api/actuator/health`           | Health do banco e do Redis                        |
+
+Erros seguem o formato `{ timestamp, status, error, message, details? }`.
 
 ## 🔒 Concorrência e consistência
 
-O sistema utiliza mecanismos para garantir consistência durante operações simultâneas, incluindo:
-
-* Locks distribuídos com Redis
-* `SELECT ... FOR UPDATE`
-* Controle de idempotência em pagamentos
-* Expiração automática de reservas
-* Operações assíncronas no acesso ao banco de dados
-
-## 📚 Documentação
-
-A API possui documentação interativa disponível através do Swagger:
-
-```text
-http://localhost:8000/docs
-```
-
-Documentações específicas de cada camada também estão disponíveis nos diretórios:
-
-```text
-backend/README.md
-frontend/README.md
-```
+* **Lock distribuído no Redis** (`SET NX PX` + remoção atômica por script Lua), com espera máxima, lease e reentrância por thread.
+* **`SELECT ... FOR UPDATE`** (lock pessimista do JPA) sempre na mesma ordem: evento → assento → reserva, evitando deadlocks.
+* **Ordem de operação em escritas:** lock distribuído → transação → commit → libera o lock.
+* **Cobrança fora de transação:** a chamada ao gateway não segura conexão nem locks de linha.
+* **Idempotência de pagamentos:** verificação prévia por chave + restrição `UNIQUE` no banco como última barreira (HTTP 409).
+* **Reserva ativa única por assento** e **um pagamento concluído por assento**, garantidos por índices parciais únicos.
+* **Expiração automática:** job agendado (ou chamada externa a `/internal/expire-reservations`).
 
 ## 📄 Licença
 

@@ -1,0 +1,74 @@
+# Todos os valores têm padrão compatível com o docker-compose.yml na raiz do projeto.
+# Qualquer um pode ser sobrescrito por variável de ambiente (veja .env.example).
+
+server:
+  port: ${PORT:8080}
+  shutdown: graceful
+
+spring:
+  application:
+    name: ticketing-system
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/ticketing_db}
+    username: ${DB_USER:ticketing_user}
+    password: ${DB_PASSWORD:ticketing_pass}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX:20}
+      connection-timeout: 30000
+      max-lifetime: 600000
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: ${MIGRATE_ON_STARTUP:true}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2s
+      connect-timeout: 2s
+  web:
+    locale: pt_BR
+    locale-resolver: fixed
+  thymeleaf:
+    cache: ${THYMELEAF_CACHE:true}
+
+ticketing:
+  reservation-timeout-minutes: ${RESERVATION_TIMEOUT_MINUTES:10}
+  payment-gateway-delay-ms: ${PAYMENT_GATEWAY_DELAY_MS:2000}
+  # Protege /internal/expire-reservations. Sem valor, o endpoint fica desativado.
+  cron-secret: ${CRON_SECRET:}
+  # Fuso usado para exibir datas nas páginas.
+  display-zone: ${DISPLAY_ZONE:America/Sao_Paulo}
+  expiration:
+    enabled: ${EXPIRATION_JOB_ENABLED:true}
+    interval-ms: ${EXPIRATION_INTERVAL_MS:60000}
+  seed:
+    enabled: ${SEED_ENABLED:false}
+
+management:
+  endpoints:
+    web:
+      base-path: /api/actuator
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-components: always
+      show-details: never
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /docs
+  paths-to-match: /api/**
+
+logging:
+  level:
+    root: ${LOG_LEVEL:info}

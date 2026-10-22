@@ -26,35 +26,24 @@ services:
       retries: 10
 
   # `docker compose --profile app up --build` sobe a aplicação inteira.
-  # Sem --profile app, só o Postgres e o Redis sobem (útil ao rodar backend/frontend localmente
-  # com `uvicorn --reload` / `npm run dev` durante o desenvolvimento).
-  backend:
+  # Sem --profile app, só PostgreSQL e Redis sobem (útil ao rodar a aplicação localmente
+  # com `mvn spring-boot:run` durante o desenvolvimento).
+  app:
     profiles: ["app"]
-    build: ./backend
+    build: .
     environment:
-      DATABASE_URL: postgresql+asyncpg://ticketing_user:ticketing_pass@postgres:5432/ticketing_db
-      REDIS_URL: redis://redis:6379
-      CORS_ORIGINS: http://localhost:3000
+      DB_URL: jdbc:postgresql://postgres:5432/ticketing_db
+      DB_USER: ticketing_user
+      DB_PASSWORD: ticketing_pass
+      REDIS_HOST: redis
+      SEED_ENABLED: "true"
     ports:
-      - "8000:8000"
+      - "8080:8080"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-
-  frontend:
-    profiles: ["app"]
-    build:
-      context: ./frontend
-      args:
-        NEXT_PUBLIC_API_URL: http://localhost:8000
-    environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
-    ports:
-      - "3000:3000"
-    depends_on:
-      - backend
 
 volumes:
   postgres_data:

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/base :: head('Erro')}"></head>
+<body>
+<div class="container">
+  <main class="narrow stack-lg">
+    <a class="back-link" th:href="@{/}">
+      <svg th:replace="~{fragments/icons :: arrow-left}"></svg>
+      Todos os eventos
+    </a>
+    <div class="alert alert-error" role="alert">
+      <svg th:replace="~{fragments/icons :: alert}"></svg>
+      <div>
+        <p class="alert-title" th:text="${status == 404} ? 'Página não encontrada' : 'Algo deu errado'">Algo deu errado</p>
+        <p class="alert-text"
+           th:text="${status == 404} ? 'O que você procura não existe ou foi removido.' : 'Tente novamente em instantes.'">Tente novamente.</p>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>
