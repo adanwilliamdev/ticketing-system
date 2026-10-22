@@ -2,104 +2,106 @@
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/base :: head('Reserva')}"></head>
 <body>
-<div class="container">
-  <main class="narrow stack-lg">
-    <a class="back-link" th:href="@{/}">
-      <svg th:replace="~{fragments/icons :: arrow-left}"></svg>
-      Todos os eventos
-    </a>
+<div th:replace="~{fragments/base :: header}"></div>
 
-    <section class="card">
-      <header class="card-header">
-        <div class="row between">
-          <h1 class="card-title" th:text="${reservation.eventName}">Evento</h1>
-          <span th:class="'badge ' + (${reservation.status.name() == 'COMPLETED'} ? 'badge-success' : (${active} ? 'badge-primary' : 'badge-secondary'))"
-                th:text="${reservation.status.label}">Ativa</span>
-        </div>
-      </header>
-      <div class="card-content stack-md">
-        <div class="row between small">
-          <span class="muted">Assento</span>
-          <span class="strong" th:text="${reservation.seatNumber}">A001</span>
-        </div>
-        <div class="row between small" th:if="${reservation.userEmail != null}">
-          <span class="muted">E-mail</span>
-          <span class="strong" th:text="${reservation.userEmail}">email</span>
+<main class="container">
+    <div class="narrow stack-lg">
+        <a class="back-link" th:href="@{/}">
+            <svg th:replace="~{fragments/icons :: arrow-left}"></svg>
+            Todos os eventos
+        </a>
+
+        <section class="card">
+            <header class="card-header">
+                <div class="row between">
+                    <h1 class="card-title" th:text="${reservation.eventName}">Evento</h1>
+                    <span th:class="'badge ' + (${reservation.status.name() == 'COMPLETED'} ? 'badge-success' : (${active} ? 'badge-primary' : 'badge-secondary'))"
+                          th:text="${reservation.status.label}">Ativa</span>
+                </div>
+            </header>
+            <div class="card-content stack-md">
+                <div class="row between small">
+                    <span class="muted">Assento</span>
+                    <span class="strong" th:text="${reservation.seatNumber}">A001</span>
+                </div>
+                <div class="row between small" th:if="${reservation.userEmail != null}">
+                    <span class="muted">E-mail</span>
+                    <span class="strong" th:text="${reservation.userEmail}">email</span>
+                </div>
+
+                <div class="row between top-border" th:if="${active and !expired}">
+                    <div class="countdown row gap-sm small strong" id="countdown"
+                         th:attr="data-expires-at=${reservation.expiresAt}"
+                         th:classappend="${reservation.timeRemainingSeconds <= 60} ? 'urgent' : ''">
+                        <svg th:replace="~{fragments/icons :: clock}"></svg>
+                        <span>Expira em <span id="countdown-value" th:text="${@fmt.countdown(reservation.timeRemainingSeconds)}">10:00</span></span>
+                    </div>
+                    <form method="post" th:action="@{/reservations/{token}/cancel(token=${reservation.reservationToken})}">
+                        <button class="btn btn-ghost btn-sm" type="submit">Cancelar reserva</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <div class="alert" role="alert" th:if="${cancelError != null}">
+            <svg th:replace="~{fragments/icons :: alert}"></svg>
+            <div>
+                <p class="alert-title">Não foi possível cancelar</p>
+                <p class="alert-text">Tente novamente em instantes.</p>
+            </div>
         </div>
 
-        <div class="row between top-border" th:if="${active and !expired}">
-          <div class="countdown row gap-sm small strong" id="countdown"
-               th:attr="data-expires-at=${reservation.expiresAt}"
-               th:classappend="${reservation.timeRemainingSeconds <= 60} ? 'urgent' : ''">
-            <svg th:replace="~{fragments/icons :: clock}"></svg>
-            <span>Expira em <span id="countdown-value" th:text="${@fmt.countdown(reservation.timeRemainingSeconds)}">10:00</span></span>
-          </div>
-          <form method="post" th:action="@{/reservations/{token}/cancel(token=${reservation.reservationToken})}">
-            <button class="btn btn-ghost btn-sm" type="submit">Cancelar reserva</button>
-          </form>
+        <div class="alert" role="alert" th:if="${cancelled != null}">
+            <svg th:replace="~{fragments/icons :: alert}"></svg>
+            <div>
+                <p class="alert-title">Reserva cancelada</p>
+                <p class="alert-text">O assento foi liberado para outras pessoas.</p>
+            </div>
         </div>
-      </div>
-    </section>
 
-    <div class="alert alert-error" role="alert" th:if="${cancelError != null}">
-      <svg th:replace="~{fragments/icons :: alert}"></svg>
-      <div>
-        <p class="alert-title">Não foi possível cancelar</p>
-        <p class="alert-text">Tente novamente em instantes.</p>
-      </div>
+        <div class="alert" role="alert" th:if="${expired}">
+            <svg th:replace="~{fragments/icons :: alert}"></svg>
+            <div>
+                <p class="alert-title">Reserva expirada</p>
+                <p class="alert-text">O tempo para concluir o pagamento acabou. Escolha o assento novamente.</p>
+            </div>
+        </div>
+
+        <section class="card card-success" th:if="${reservation.status.name() == 'COMPLETED'}">
+            <div class="card-content center stack-sm padded">
+                <svg th:replace="~{fragments/icons :: check}"></svg>
+                <p class="lead">Pagamento confirmado!</p>
+                <p class="muted small"
+                   th:text="'Assento ' + ${reservation.seatNumber} + ' para ' + ${reservation.eventName} + ' garantido.'">Garantido.</p>
+            </div>
+        </section>
+
+        <section class="card" th:if="${active and !expired}">
+            <header class="card-header"><h2 class="card-title">Pagamento</h2></header>
+            <form class="card-content stack-md" id="payment-form" method="post"
+                  th:action="@{/reservations/{token}/pay(token=${reservation.reservationToken})}">
+                <input type="hidden" name="idempotencyKey" th:value="${idempotencyKey}">
+
+                <div class="stack-sm">
+                    <label class="radio-row" th:each="method, stat : ${paymentMethods}">
+                        <input type="radio" name="paymentMethod" th:value="${method.name()}" th:checked="${stat.first}">
+                        <span th:text="${method.label}">Pix</span>
+                    </label>
+                </div>
+
+                <div class="alert" role="alert" th:if="${paymentError != null}">
+                    <svg th:replace="~{fragments/icons :: alert}"></svg>
+                    <div>
+                        <p class="alert-title">Pagamento não concluído</p>
+                        <p class="alert-text" th:text="${paymentError}">Erro</p>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary btn-block" type="submit" id="pay-button">Confirmar pagamento</button>
+            </form>
+        </section>
     </div>
-
-    <div class="alert alert-error" role="alert" th:if="${cancelled != null}">
-      <svg th:replace="~{fragments/icons :: alert}"></svg>
-      <div>
-        <p class="alert-title">Reserva cancelada</p>
-        <p class="alert-text">O assento foi liberado para outras pessoas.</p>
-      </div>
-    </div>
-
-    <div class="alert alert-error" role="alert" th:if="${expired}">
-      <svg th:replace="~{fragments/icons :: alert}"></svg>
-      <div>
-        <p class="alert-title">Reserva expirada</p>
-        <p class="alert-text">O tempo para concluir o pagamento acabou. Escolha o assento novamente.</p>
-      </div>
-    </div>
-
-    <section class="card card-success" th:if="${reservation.status.name() == 'COMPLETED'}">
-      <div class="card-content center stack-sm padded">
-        <svg th:replace="~{fragments/icons :: check}"></svg>
-        <p class="lead">Pagamento confirmado!</p>
-        <p class="muted small"
-           th:text="'Assento ' + ${reservation.seatNumber} + ' para ' + ${reservation.eventName} + ' garantido.'">Garantido.</p>
-      </div>
-    </section>
-
-    <section class="card" th:if="${active and !expired}">
-      <header class="card-header"><h2 class="card-title">Pagamento</h2></header>
-      <form class="card-content stack-md" id="payment-form" method="post"
-            th:action="@{/reservations/{token}/pay(token=${reservation.reservationToken})}">
-        <input type="hidden" name="idempotencyKey" th:value="${idempotencyKey}">
-
-        <div class="stack-sm">
-          <label class="radio-row" th:each="method, stat : ${paymentMethods}">
-            <input type="radio" name="paymentMethod" th:value="${method.name()}" th:checked="${stat.first}">
-            <span th:text="${method.label}">Pix</span>
-          </label>
-        </div>
-
-        <div class="alert alert-error" role="alert" th:if="${paymentError != null}">
-          <svg th:replace="~{fragments/icons :: alert}"></svg>
-          <div>
-            <p class="alert-title">Pagamento não concluído</p>
-            <p class="alert-text" th:text="${paymentError}">Erro</p>
-          </div>
-        </div>
-
-        <button class="btn btn-primary btn-block" type="submit" id="pay-button">Confirmar pagamento</button>
-      </form>
-    </section>
-  </main>
-</div>
+</main>
 <script th:src="@{/js/reservation.js}"></script>
 </body>
 </html>

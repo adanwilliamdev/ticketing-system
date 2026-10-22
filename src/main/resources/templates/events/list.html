@@ -2,49 +2,152 @@
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/base :: head('Eventos')}"></head>
 <body>
-<div class="container">
-    <main class="stack-lg">
-        <header class="stack-xs">
+<div th:replace="~{fragments/base :: header}"></div>
+
+<main class="container">
+    <section class="hero">
+        <div class="hero-text">
+      <span class="eyebrow">
+        <svg th:replace="~{fragments/icons :: ticket}"></svg>
+        Agenda Cultural
+      </span>
             <h1 class="title">Eventos disponíveis</h1>
-            <p class="muted">Escolha um evento para ver os assentos e reservar o seu.</p>
-        </header>
+            <p class="lead">Escolha um evento para explorar os assentos e garantir o seu ingresso com conforto.</p>
+        </div>
+        <div class="hero-stats" th:unless="${#lists.isEmpty(events)}">
+            <div class="stat-card">
+                <span class="stat-label">Total</span>
+                <span class="stat-value" th:text="${#lists.size(events)} + ' Eventos'">0 Eventos</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Status</span>
+                <span class="stat-value accent">Aberto</span>
+            </div>
+        </div>
+    </section>
 
-        <p class="empty muted" th:if="${#lists.isEmpty(events)}">Nenhum evento disponível no momento.</p>
+    <div class="toolbar" th:unless="${#lists.isEmpty(events)}">
+        <div class="search-box">
+            <svg th:replace="~{fragments/icons :: search}"></svg>
+            <input type="text" id="searchInput" class="search-input" placeholder="Buscar por evento ou local..." autocomplete="off">
+        </div>
+        <div class="sort-box">
+            <span>Ordenar por:</span>
+            <select id="sortSelect" class="sort-select">
+                <option value="date">Data do evento</option>
+                <option value="price-asc">Preço: menor</option>
+                <option value="price-desc">Preço: maior</option>
+            </select>
+        </div>
+    </div>
 
-        <section class="grid" th:unless="${#lists.isEmpty(events)}">
-            <a class="card-link" th:each="event : ${events}" th:href="@{/events/{id}(id=${event.id})}">
-                <article class="card card-hover event-card">
-                    <div class="card-image">
-                        <div class="card-image-placeholder">
-                            <svg th:replace="~{fragments/icons :: ticket}"></svg>
-                        </div>
-                        <span class="badge-price" th:text="${@fmt.currency(event.price)}">R$ 0,00</span>
+    <p class="empty muted" th:if="${#lists.isEmpty(events)}">Nenhum evento disponível no momento.</p>
+
+    <section id="eventsGrid" class="grid" th:unless="${#lists.isEmpty(events)}">
+        <a th:each="event : ${events}" th:href="@{/events/{id}(id=${event.id})}" class="card-link"
+           th:attr="data-event-name=${event.name}, data-event-location=${event.location}, data-event-price=${event.price}, data-event-date=${event.startDateTime}">
+            <article class="card card-hover event-card">
+                <div class="card-image">
+                    <div class="card-image-placeholder">
+                        <svg th:replace="~{fragments/icons :: ticket}"></svg>
                     </div>
+                    <span class="badge-price" th:text="${@fmt.currency(event.price)}">R$ 0,00</span>
+                </div>
+                <div class="card-content">
+                    <h2 class="card-title" th:text="${event.name}">Evento</h2>
+                    <ul class="event-details">
+                        <li>
+                            <span class="icon-wrap"><svg th:replace="~{fragments/icons :: calendar}"></svg></span>
+                            <span th:text="${@fmt.dateTime(event.startDateTime)}">data</span>
+                        </li>
+                        <li th:if="${event.location != null}">
+                            <span class="icon-wrap"><svg th:replace="~{fragments/icons :: pin}"></svg></span>
+                            <span th:text="${event.location}">local</span>
+                        </li>
+                        <li>
+                            <span class="icon-wrap"><svg th:replace="~{fragments/icons :: ticket}"></svg></span>
+                            <span th:text="${event.availableTickets} + ' ingressos disponíveis'">0 ingressos disponíveis</span>
+                        </li>
+                    </ul>
+                    <span class="btn btn-primary btn-block">
+            <span>Ver Assentos</span>
+            <svg th:replace="~{fragments/icons :: arrow-right}"></svg>
+          </span>
+                </div>
+            </article>
+        </a>
+    </section>
 
-                    <div class="card-content">
-                        <div class="stack-sm">
-                            <h2 class="card-title" th:text="${event.name}">Evento</h2>
-                            <ul class="event-details muted small">
-                                <li>
-                                    <svg th:replace="~{fragments/icons :: calendar}"></svg>
-                                    <span th:text="${@fmt.dateTime(event.startDateTime)}">data</span>
-                                </li>
-                                <li th:if="${event.location != null}">
-                                    <svg th:replace="~{fragments/icons :: pin}"></svg>
-                                    <span th:text="${event.location}">local</span>
-                                </li>
-                                <li>
-                                    <svg th:replace="~{fragments/icons :: ticket}"></svg>
-                                    <span th:text="${event.availableTickets} + ' ingressos disponíveis'">0 ingressos disponíveis</span>
-                                </li>
-                            </ul>
-                        </div>
-                        <span class="btn btn-primary btn-block">Ver Assentos</span>
-                    </div>
-                </article>
-            </a>
-        </section>
-    </main>
-</div>
+    <div id="jsEmptyState" class="empty-state hidden" th:unless="${#lists.isEmpty(events)}">
+        <div class="empty-icon">
+            <svg th:replace="~{fragments/icons :: search}"></svg>
+        </div>
+        <h3 class="empty-title">Nenhum evento encontrado</h3>
+        <p class="empty-text">Tente ajustar a sua busca ou mudar a ordenação.</p>
+        <button class="btn btn-primary" type="button" onclick="clearFilters()">Limpar busca</button>
+    </div>
+</main>
+
+<script>
+    (function () {
+      'use strict';
+      var grid = document.getElementById('eventsGrid');
+      var search = document.getElementById('searchInput');
+      var sort = document.getElementById('sortSelect');
+      var empty = document.getElementById('jsEmptyState');
+      if (!grid || !search || !sort) return;
+
+      var cards = Array.prototype.slice.call(grid.querySelectorAll('.event-card'));
+
+      function applyFilters() {
+        var q = search.value.trim().toLowerCase();
+        var visible = 0;
+        cards.forEach(function (card) {
+          var wrapper = card.parentElement;
+          var name = (wrapper.getAttribute('data-event-name') || '').toLowerCase();
+          var loc = (wrapper.getAttribute('data-event-location') || '').toLowerCase();
+          var matches = !q || name.indexOf(q) !== -1 || loc.indexOf(q) !== -1;
+          wrapper.style.display = matches ? '' : 'none';
+          if (matches) visible++;
+        });
+        if (empty) empty.classList.toggle('hidden', visible > 0);
+      }
+
+      function applySort() {
+        var mode = sort.value;
+        var sorted = cards.slice();
+        if (mode === 'price-asc') {
+          sorted.sort(function (a, b) {
+            return parseFloat(a.parentElement.getAttribute('data-event-price')) -
+                   parseFloat(b.parentElement.getAttribute('data-event-price'));
+          });
+        } else if (mode === 'price-desc') {
+          sorted.sort(function (a, b) {
+            return parseFloat(b.parentElement.getAttribute('data-event-price')) -
+                   parseFloat(a.parentElement.getAttribute('data-event-price'));
+          });
+        } else {
+          sorted.sort(function (a, b) {
+            var da = a.parentElement.getAttribute('data-event-date') || '';
+            var db = b.parentElement.getAttribute('data-event-date') || '';
+            return da < db ? -1 : da > db ? 1 : 0;
+          });
+        }
+        sorted.forEach(function (card) { grid.appendChild(card.parentElement); });
+      }
+
+      function clearFilters() {
+        search.value = '';
+        sort.value = 'date';
+        applyFilters();
+        applySort();
+        search.focus();
+      }
+
+      window.clearFilters = clearFilters;
+      search.addEventListener('input', applyFilters);
+      sort.addEventListener('change', function () { applySort(); applyFilters(); });
+    })();
+</script>
 </body>
 </html>
