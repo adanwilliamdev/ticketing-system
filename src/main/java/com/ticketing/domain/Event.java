@@ -50,6 +50,13 @@ public class Event {
     @Column(nullable = false, length = 20)
     private EventStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private EventCategory category = EventCategory.OUTROS;
+
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
     @Column(name = "version")
     private int version;
 
@@ -107,4 +114,10 @@ public class Event {
     public int getAvailableTickets() { return availableTickets; }
     public BigDecimal getPrice() { return price; }
     public EventStatus getStatus() { return status; }
+
+    public EventCategory getCategory() { return category; }
+    public void setCategory(EventCategory category) { this.category = category; }
+
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 }

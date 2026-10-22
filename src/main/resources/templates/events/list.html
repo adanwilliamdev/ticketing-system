@@ -26,65 +26,88 @@
         </div>
     </section>
 
-    <div class="toolbar" th:unless="${#lists.isEmpty(events)}">
-        <div class="search-box">
-            <svg th:replace="~{fragments/icons :: search}"></svg>
-            <input type="text" id="searchInput" class="search-input" placeholder="Buscar por evento ou local..." autocomplete="off">
-        </div>
-        <div class="sort-box">
-            <span>Ordenar por:</span>
-            <select id="sortSelect" class="sort-select">
-                <option value="date">Data do evento</option>
-                <option value="price-asc">Preço: menor</option>
-                <option value="price-desc">Preço: maior</option>
-            </select>
-        </div>
-    </div>
-
     <p class="empty muted" th:if="${#lists.isEmpty(events)}">Nenhum evento disponível no momento.</p>
 
-    <section id="eventsGrid" class="grid" th:unless="${#lists.isEmpty(events)}">
-        <a th:each="event : ${events}" th:href="@{/events/{id}(id=${event.id})}" class="card-link"
-           th:attr="data-event-name=${event.name}, data-event-location=${event.location}, data-event-price=${event.price}, data-event-date=${event.startDateTime}">
-            <article class="card card-hover event-card">
-                <div class="card-image">
-                    <div class="card-image-placeholder">
-                        <svg th:replace="~{fragments/icons :: ticket}"></svg>
-                    </div>
-                    <span class="badge-price" th:text="${@fmt.currency(event.price)}">R$ 0,00</span>
-                </div>
-                <div class="card-content">
-                    <h2 class="card-title" th:text="${event.name}">Evento</h2>
-                    <ul class="event-details">
-                        <li>
-                            <span class="icon-wrap"><svg th:replace="~{fragments/icons :: calendar}"></svg></span>
-                            <span th:text="${@fmt.dateTime(event.startDateTime)}">data</span>
-                        </li>
-                        <li th:if="${event.location != null}">
-                            <span class="icon-wrap"><svg th:replace="~{fragments/icons :: pin}"></svg></span>
-                            <span th:text="${event.location}">local</span>
-                        </li>
-                        <li>
-                            <span class="icon-wrap"><svg th:replace="~{fragments/icons :: ticket}"></svg></span>
-                            <span th:text="${event.availableTickets} + ' ingressos disponíveis'">0 ingressos disponíveis</span>
-                        </li>
-                    </ul>
-                    <span class="btn btn-primary btn-block">
-            <span>Ver Assentos</span>
-            <svg th:replace="~{fragments/icons :: arrow-right}"></svg>
-          </span>
-                </div>
-            </article>
-        </a>
-    </section>
+    <div th:unless="${#lists.isEmpty(events)}">
 
-    <div id="jsEmptyState" class="empty-state hidden" th:unless="${#lists.isEmpty(events)}">
-        <div class="empty-icon">
-            <svg th:replace="~{fragments/icons :: search}"></svg>
+        <!-- Busca + Ordenação -->
+        <div class="toolbar">
+            <div class="search-box">
+                <svg th:replace="~{fragments/icons :: search}"></svg>
+                <input type="text" id="searchInput" class="search-input" placeholder="Buscar por evento ou local..." autocomplete="off">
+            </div>
+            <div class="sort-box">
+                <span>Ordenar por:</span>
+                <select id="sortSelect" class="sort-select">
+                    <option value="date">Data do evento</option>
+                    <option value="price-asc">Preço: menor</option>
+                    <option value="price-desc">Preço: maior</option>
+                </select>
+            </div>
         </div>
-        <h3 class="empty-title">Nenhum evento encontrado</h3>
-        <p class="empty-text">Tente ajustar a sua busca ou mudar a ordenação.</p>
-        <button class="btn btn-primary" type="button" onclick="clearFilters()">Limpar busca</button>
+
+        <!-- Chips de categoria -->
+        <div class="category-filters" id="categoryFilters" role="tablist" aria-label="Filtrar por categoria">
+            <button type="button" class="category-chip active" data-category="all" role="tab" aria-selected="true">🎟️ Todos</button>
+            <button type="button" class="category-chip" data-category="musica" role="tab" aria-selected="false">🎵 Música</button>
+            <button type="button" class="category-chip" data-category="tech" role="tab" aria-selected="false">💻 Tecnologia</button>
+            <button type="button" class="category-chip" data-category="teatro" role="tab" aria-selected="false">🎭 Teatro & Arte</button>
+            <button type="button" class="category-chip" data-category="outros" role="tab" aria-selected="false">📌 Outros</button>
+        </div>
+
+        <!-- Grid de eventos -->
+        <section id="eventsGrid" class="grid">
+            <a th:each="event : ${events}" th:href="@{/events/{id}(id=${event.id})}" class="card-link"
+               th:attr="data-event-name=${event.name},
+                  data-event-location=${event.location},
+                  data-event-price=${event.price},
+                  data-event-date=${event.startDateTime},
+                  data-event-category=${event.category != null ? #strings.toLowerCase(event.category.name()) : 'outros'}">
+                <article class="card card-hover event-card">
+                    <div class="card-image">
+                        <img th:if="${event.imageUrl != null and !#strings.isEmpty(event.imageUrl)}"
+                             th:src="${event.imageUrl}" th:alt="${event.name}" loading="lazy">
+                        <div th:unless="${event.imageUrl != null and !#strings.isEmpty(event.imageUrl)}"
+                             class="card-image-placeholder">
+                            <svg th:replace="~{fragments/icons :: ticket}"></svg>
+                        </div>
+                        <span class="badge-price" th:text="${@fmt.currency(event.price)}">R$ 0,00</span>
+                    </div>
+                    <div class="card-content">
+                        <h2 class="card-title" th:text="${event.name}">Evento</h2>
+                        <ul class="event-details">
+                            <li>
+                                <span class="icon-wrap"><svg th:replace="~{fragments/icons :: calendar}"></svg></span>
+                                <span th:text="${@fmt.dateTime(event.startDateTime)}">data</span>
+                            </li>
+                            <li th:if="${event.location != null}">
+                                <span class="icon-wrap"><svg th:replace="~{fragments/icons :: pin}"></svg></span>
+                                <span th:text="${event.location}">local</span>
+                            </li>
+                            <li>
+                                <span class="icon-wrap"><svg th:replace="~{fragments/icons :: ticket}"></svg></span>
+                                <span th:text="${event.availableTickets} + ' ingressos disponíveis'">0 ingressos disponíveis</span>
+                            </li>
+                        </ul>
+                        <span class="btn btn-primary btn-block">
+              <span>Ver Assentos</span>
+              <svg th:replace="~{fragments/icons :: arrow-right}"></svg>
+            </span>
+                    </div>
+                </article>
+            </a>
+        </section>
+
+        <!-- Empty state da busca/filtro -->
+        <div id="jsEmptyState" class="empty-state hidden">
+            <div class="empty-icon">
+                <svg th:replace="~{fragments/icons :: search}"></svg>
+            </div>
+            <h3 class="empty-title">Nenhum evento encontrado</h3>
+            <p class="empty-text">Tente ajustar os filtros ou limpar a busca.</p>
+            <button class="btn btn-primary" type="button" onclick="clearFilters()">Limpar filtros</button>
+        </div>
+
     </div>
 </main>
 
@@ -92,39 +115,49 @@
     (function () {
       'use strict';
       var grid = document.getElementById('eventsGrid');
+      if (!grid) return;
+
       var search = document.getElementById('searchInput');
       var sort = document.getElementById('sortSelect');
+      var chips = Array.prototype.slice.call(document.querySelectorAll('.category-chip'));
       var empty = document.getElementById('jsEmptyState');
-      if (!grid || !search || !sort) return;
 
       var cards = Array.prototype.slice.call(grid.querySelectorAll('.event-card'));
+      var currentCategory = 'all';
 
       function applyFilters() {
-        var q = search.value.trim().toLowerCase();
+        var q = (search ? search.value : '').trim().toLowerCase();
         var visible = 0;
         cards.forEach(function (card) {
           var wrapper = card.parentElement;
           var name = (wrapper.getAttribute('data-event-name') || '').toLowerCase();
           var loc = (wrapper.getAttribute('data-event-location') || '').toLowerCase();
-          var matches = !q || name.indexOf(q) !== -1 || loc.indexOf(q) !== -1;
-          wrapper.style.display = matches ? '' : 'none';
-          if (matches) visible++;
+          var cat = (wrapper.getAttribute('data-event-category') || '').toLowerCase();
+
+          var matchQ = !q || name.indexOf(q) !== -1 || loc.indexOf(q) !== -1;
+          var matchC = currentCategory === 'all' || cat === currentCategory;
+          var show = matchQ && matchC;
+
+          wrapper.style.display = show ? '' : 'none';
+          if (show) visible++;
         });
         if (empty) empty.classList.toggle('hidden', visible > 0);
       }
 
       function applySort() {
+        if (!sort) return;
         var mode = sort.value;
         var sorted = cards.slice();
+
         if (mode === 'price-asc') {
           sorted.sort(function (a, b) {
-            return parseFloat(a.parentElement.getAttribute('data-event-price')) -
-                   parseFloat(b.parentElement.getAttribute('data-event-price'));
+            return parseFloat(a.parentElement.getAttribute('data-event-price') || '0') -
+                   parseFloat(b.parentElement.getAttribute('data-event-price') || '0');
           });
         } else if (mode === 'price-desc') {
           sorted.sort(function (a, b) {
-            return parseFloat(b.parentElement.getAttribute('data-event-price')) -
-                   parseFloat(a.parentElement.getAttribute('data-event-price'));
+            return parseFloat(b.parentElement.getAttribute('data-event-price') || '0') -
+                   parseFloat(a.parentElement.getAttribute('data-event-price') || '0');
           });
         } else {
           sorted.sort(function (a, b) {
@@ -136,17 +169,37 @@
         sorted.forEach(function (card) { grid.appendChild(card.parentElement); });
       }
 
-      function clearFilters() {
-        search.value = '';
-        sort.value = 'date';
+      chips.forEach(function (chip) {
+        chip.addEventListener('click', function () {
+          currentCategory = chip.getAttribute('data-category') || 'all';
+          chips.forEach(function (c) {
+            c.classList.remove('active');
+            c.setAttribute('aria-selected', 'false');
+          });
+          chip.classList.add('active');
+          chip.setAttribute('aria-selected', 'true');
+          applyFilters();
+        });
+      });
+
+      if (search) search.addEventListener('input', applyFilters);
+      if (sort) sort.addEventListener('change', function () { applySort(); applyFilters(); });
+
+      window.clearFilters = function () {
+        if (search) search.value = '';
+        if (sort) sort.value = 'date';
+        currentCategory = 'all';
+        chips.forEach(function (c) {
+          var isAll = c.getAttribute('data-category') === 'all';
+          c.classList.toggle('active', isAll);
+          c.setAttribute('aria-selected', isAll ? 'true' : 'false');
+        });
         applyFilters();
         applySort();
-        search.focus();
-      }
+        if (search) search.focus();
+      };
 
-      window.clearFilters = clearFilters;
-      search.addEventListener('input', applyFilters);
-      sort.addEventListener('change', function () { applySort(); applyFilters(); });
+      applyFilters();
     })();
 </script>
 </body>

@@ -1,6 +1,7 @@
 package com.ticketing.seed;
 
 import com.ticketing.domain.Event;
+import com.ticketing.domain.EventCategory;
 import com.ticketing.domain.EventStatus;
 import com.ticketing.domain.Ticket;
 import com.ticketing.domain.TicketStatus;
@@ -50,20 +51,26 @@ public class DataSeeder implements ApplicationRunner {
             }
             LocalDateTime base = LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.HOURS);
 
-            createEvent(new Event("Rock Concert", "Amazing rock concert with multiple bands",
-                            base.plusDays(60).withHour(23), base.plusDays(61).withHour(2), "Stadium Arena", 1000,
-                            new BigDecimal("150.00"), EventStatus.PUBLISHED),
-                    "A", 1000, 20, new int[] {100, 300});
+            Event rock = new Event("Rock Concert", "Amazing rock concert with multiple bands",
+                    base.plusDays(60).withHour(23), base.plusDays(61).withHour(2), "Stadium Arena", 1000,
+                    new BigDecimal("150.00"), EventStatus.PUBLISHED);
+            rock.setCategory(EventCategory.MUSICA);
+            rock.setImageUrl("https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&q=80&w=800");
+            createEvent(rock, "A", 1000, 20, new int[] {100, 300});
 
-            createEvent(new Event("Tech Conference", "Annual technology conference",
-                            base.plusDays(30).withHour(12), base.plusDays(32).withHour(21), "Convention Center", 500,
-                            new BigDecimal("299.00"), EventStatus.PUBLISHED),
-                    "B", 500, 25, new int[] {50, 150});
+            Event tech = new Event("Tech Conference", "Annual technology conference",
+                    base.plusDays(30).withHour(12), base.plusDays(32).withHour(21), "Convention Center", 500,
+                    new BigDecimal("299.00"), EventStatus.PUBLISHED);
+            tech.setCategory(EventCategory.TECH);
+            tech.setImageUrl("https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=800");
+            createEvent(tech, "B", 500, 25, new int[] {50, 150});
 
-            createEvent(new Event("Jazz Night", "Classic jazz performance",
-                            base.plusDays(15).withHour(22), base.plusDays(16).withHour(1), "Jazz Club", 200,
-                            new BigDecimal("75.00"), EventStatus.PUBLISHED),
-                    "C", 200, 10, new int[] {30, 100});
+            Event jazz = new Event("Jazz Night", "Classic jazz performance",
+                    base.plusDays(15).withHour(22), base.plusDays(16).withHour(1), "Jazz Club", 200,
+                    new BigDecimal("75.00"), EventStatus.PUBLISHED);
+            jazz.setCategory(EventCategory.MUSICA);
+            jazz.setImageUrl("https://images.unsplash.com/photo-1511192336575-5a79af67a629?auto=format&fit=crop&q=80&w=800");
+            createEvent(jazz, "C", 200, 10, new int[] {30, 100});
 
             log.info("Dados de exemplo inseridos com sucesso");
         });
