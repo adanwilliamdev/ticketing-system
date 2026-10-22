@@ -1,5 +1,6 @@
 package com.ticketing.dto;
 
+import com.ticketing.domain.EventCategory;
 import com.ticketing.domain.EventStatus;
 import java.math.BigDecimal;
 
@@ -13,5 +14,7 @@ public record EventResponse(
         int totalCapacity,
         int availableTickets,
         BigDecimal price,
-        EventStatus status) {
+        EventStatus status,
+        EventCategory category,
+        String imageUrl) {
 }

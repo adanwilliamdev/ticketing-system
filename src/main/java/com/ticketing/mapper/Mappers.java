@@ -33,7 +33,9 @@ public final class Mappers {
                 event.getTotalCapacity(),
                 event.getAvailableTickets(),
                 event.getPrice(),
-                event.getStatus());
+                event.getStatus(),
+                event.getCategory(),
+                event.getImageUrl());
     }
 
     public static SeatResponse toSeatResponse(Ticket ticket) {
